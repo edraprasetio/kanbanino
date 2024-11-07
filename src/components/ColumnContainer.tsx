@@ -1,12 +1,15 @@
 import styled from '@emotion/styled'
-import { Column, Id } from '../types'
+import { Column, Id, Task } from '../types'
 import { BaseButton } from './atoms/button'
 import { TrashIcon } from '../assets/icons/TrashIcon'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { useState } from 'react'
+import { PlusIcon } from '../assets/icons/PlusIcon'
 
 const Container = styled.div`
-    width: 240px;
+    width: 300px;
+    height: 500px;
     max-height: 500px;
     background-color: #2f3c4f;
     color: white;
@@ -77,20 +80,57 @@ const TrashButton = styled(BaseButton)`
     }
 `
 
+const TaskButton = styled(TrashButton)`
+    margin-bottom: 8px;
+    margin-left: 8px;
+    width: 160px;
+    color: white;
+    &:hover {
+        background-color: #595a80;
+        border: 3px solid #595a80;
+        color: white;
+    }
+    &:active {
+        background-color: #6882a8;
+        border: 3px solid #4a5d78;
+    }
+`
+
+const EmptyContainer = styled(Container)`
+    opacity: 0.3;
+`
+
+const StyledInput = styled.input`
+    width: 160px;
+    background-color: #3e3f63;
+    color: white;
+    border: none;
+    border-bottom: 1px solid white;
+    radius: 4px;
+    font-size: 16px;
+`
+
 interface Props {
     column: Column
     deleteColumn: (id: Id) => void
+    updateColumn: (id: Id, title: string) => void
+
+    createTask: (columnId: Id) => void
+    tasks: Task[]
 }
 
 export default function ColumnContainer(props: Props) {
-    const { column, deleteColumn } = props
+    const { column, deleteColumn, updateColumn, createTask, tasks } = props
 
-    const { setNodeRef, attributes, listeners, transform, transition } = useSortable({
+    const [editMode, setEditMode] = useState(false)
+
+    const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
         id: column.id,
         data: {
             type: 'Column',
             column,
         },
+        disabled: editMode,
     })
 
     const style = {
@@ -98,19 +138,52 @@ export default function ColumnContainer(props: Props) {
         transform: CSS.Transform.toString(transform),
     }
 
+    if (isDragging) {
+        return <EmptyContainer ref={setNodeRef} style={style}></EmptyContainer>
+    }
+
     return (
         <Container ref={setNodeRef} style={style}>
-            <Header {...attributes} {...listeners}>
+            <Header
+                {...attributes}
+                {...listeners}
+                onClick={() => {
+                    setEditMode(true)
+                }}
+            >
                 <TitleContainer>
                     <ItemsNumber>0</ItemsNumber>
-                    {column.title}
+                    {!editMode && column.title}
+                    {editMode && (
+                        <StyledInput
+                            value={column.title}
+                            onChange={(e) => {
+                                updateColumn(column.id, e.target.value)
+                            }}
+                            autoFocus
+                            onBlur={() => {
+                                setEditMode(false)
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key !== 'Enter') return
+                                setEditMode(false)
+                            }}
+                        />
+                    )}
                 </TitleContainer>
                 <TrashButton onClick={() => deleteColumn(column.id)}>
                     <TrashIcon />
                 </TrashButton>
             </Header>
-            <Content>Content</Content>
-            <Footer>Footer</Footer>
+            <Content>
+                {tasks.map((task) => (
+                    <div key={task.id}>{task.content}</div>
+                ))}
+            </Content>
+            <TaskButton onClick={() => createTask(column.id)}>
+                <PlusIcon />
+                Add Task
+            </TaskButton>
         </Container>
     )
 }
