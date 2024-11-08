@@ -2,10 +2,11 @@ import styled from '@emotion/styled'
 import { Column, Id, Task } from '../types'
 import { BaseButton } from './atoms/button'
 import { TrashIcon } from '../assets/icons/TrashIcon'
-import { useSortable } from '@dnd-kit/sortable'
+import { SortableContext, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { PlusIcon } from '../assets/icons/PlusIcon'
+import TaskCard from './TaskCard'
 
 const Container = styled.div`
     width: 300px;
@@ -38,13 +39,6 @@ const Content = styled.div`
     display: flex;
     flex-direction: column;
     gap: 8px;
-`
-
-const Footer = styled.div`
-    background-color: #21252e;
-    padding: 16px;
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
 `
 
 const ItemsNumber = styled.div`
@@ -116,11 +110,13 @@ interface Props {
     updateColumn: (id: Id, title: string) => void
 
     createTask: (columnId: Id) => void
+    deleteTask: (id: Id) => void
+    updateTask: (id: Id, content: string) => void
     tasks: Task[]
 }
 
 export default function ColumnContainer(props: Props) {
-    const { column, deleteColumn, updateColumn, createTask, tasks } = props
+    const { column, deleteColumn, updateColumn, createTask, deleteTask, updateTask, tasks } = props
 
     const [editMode, setEditMode] = useState(false)
 
@@ -132,6 +128,10 @@ export default function ColumnContainer(props: Props) {
         },
         disabled: editMode,
     })
+
+    const tasksIds = useMemo(() => {
+        return tasks.map((task) => task.id)
+    }, [tasks])
 
     const style = {
         transition,
@@ -176,9 +176,11 @@ export default function ColumnContainer(props: Props) {
                 </TrashButton>
             </Header>
             <Content>
-                {tasks.map((task) => (
-                    <div key={task.id}>{task.content}</div>
-                ))}
+                <SortableContext items={tasksIds}>
+                    {tasks.map((task) => (
+                        <TaskCard key={task.id} task={task} deleteTask={deleteTask} updateTask={updateTask} />
+                    ))}
+                </SortableContext>
             </Content>
             <TaskButton onClick={() => createTask(column.id)}>
                 <PlusIcon />
